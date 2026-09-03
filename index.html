@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Dak Inspect | Onafhankelijke Dakinspectie met Drone</title>
+<meta name="description" content="Onafhankelijke dakinspectie met drone. Professionele, veilige en gedetailleerde inspecties van daken voor woningen en gebouwen in Vlaanderen.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ Design tokens — UNCHANGED colors from existing site ============ */
+:root{
+  --radius:.25rem;
+  --ink: oklch(14.5% 0 0);
+  --ink-soft: oklch(18% 0 0);
+  --charcoal: oklch(26.5% 0 0);
+  --offwhite: oklch(96.8% .004 90);
+  --gold: oklch(74% .09 82);
+  --gold-soft: oklch(84% .06 85);
+  --background: var(--offwhite);
+  --foreground: oklch(18% 0 0);
+  --card: oklch(100% 0 0);
+  --muted: oklch(94% .003 90);
+  --muted-foreground: oklch(50% 0 0);
+  --border: oklch(89% .003 90);
+  --hero-canvas: radial-gradient(120% 90% at 50% 42%, oklch(42% 0 0) 0%, oklch(30% 0 0) 26%, oklch(20% 0 0) 55%, oklch(14.5% 0 0) 78%, oklch(11% 0 0) 100%);
+  --hero-glow: radial-gradient(45% 40% at 50% 40%, color-mix(in oklab, var(--gold) 16%, transparent) 0%, transparent 70%);
+  --shadow-panel: 0 30px 80px -30px oklch(0% 0 0/.75);
+  --shadow-soft: 0 18px 40px -24px oklch(0% 0 0/.28);
+  --shadow-card-hover: 0 24px 48px -20px oklch(0% 0 0/.35);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --ease: cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{max-width:100%; display:block;}
+a{color:inherit; text-decoration:none;}
+ul{list-style:none;}
+button{font-family:inherit;}
+.container{width:100%; max-width:72rem; margin:0 auto; padding:0 1.5rem;}
+.container-sm{width:100%; max-width:48rem; margin:0 auto; padding:0 1.5rem;}
+
+h1,h2,h3,h4{font-family: var(--font-display); font-weight:600; letter-spacing:-.01em; color:var(--foreground);}
+h1{ line-height:1.1; }
+h2{ line-height:1.2; }
+h3{ line-height:1.3; }
+
+/* Skip link for accessibility */
+.skip-link{
+  position:absolute; left:-999px; top:0; background:var(--gold); color:var(--ink);
+  padding:.6rem 1rem; z-index:999; font-weight:600; font-size:.85rem;
+}
+.skip-link:focus{ left:1rem; top:1rem; }
+
+/* Focus visibility */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline:2px solid var(--gold); outline-offset:2px;
+}
+
+/* Reveal-on-scroll (Intersection Observer driven) */
+.reveal{ opacity:0; transform:translateY(22px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+.reveal.is-visible{ opacity:1; transform:translateY(0); }
+@media (prefers-reduced-motion: reduce){
+  .reveal{ opacity:1; transform:none; transition:none; }
+  html{ scroll-behavior:auto; }
+}
+
+/* Buttons */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  font-weight:600; font-size:.9rem; padding:.85rem 1.75rem; border-radius:.25rem;
+  cursor:pointer; border:1px solid transparent; transition:transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease;
+  white-space:nowrap; position:relative;
+}
+.btn:active{ transform:translateY(0); }
+.btn-gold{ background: var(--gold); color: var(--ink); }
+.btn-gold:hover{ background: var(--gold-soft); transform:translateY(-2px); box-shadow:0 12px 24px -12px color-mix(in oklab, var(--gold) 60%, transparent); }
+.btn-outline-dark{ border-color: rgba(255,255,255,.35); color:#fff; }
+.btn-outline-dark:hover{ border-color:#fff; transform:translateY(-2px); }
+.btn-outline{ border-color: var(--border); color: var(--foreground); }
+.btn-outline:hover{ border-color: var(--gold); transform:translateY(-2px); }
+.btn-dark{ background: var(--ink); color:#fff; }
+.btn-dark:hover{ background:#000; transform:translateY(-2px); }
+.btn-text{ font-size:.85rem; font-weight:600; color:var(--gold); position:relative; display:inline-flex; align-items:center; gap:.35rem; }
+.btn-text::after{ content:""; position:absolute; left:0; bottom:-2px; width:0; height:1px; background:var(--gold); transition:width .25s var(--ease); }
+.btn-text:hover::after{ width:100%; }
+.btn-text:hover .arrow{ transform:translateX(3px); }
+.arrow{ display:inline-block; transition:transform .2s var(--ease); }
+
+/* Header */
+header{
+  position:sticky; top:0; z-index:100;
+  background: rgba(20,20,20,.78);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  transition: background .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+header.is-scrolled{
+  background: rgba(15,15,15,.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom-color: rgba(255,255,255,.1);
+  box-shadow: 0 10px 30px -20px rgba(0,0,0,.6);
+}
+.nav-wrap{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.7rem 1.5rem; max-width:80rem; margin:0 auto;
+}
+.nav-links{ display:flex; align-items:center; gap:2rem; }
+.nav-links a{
+  color: rgba(255,255,255,.78); font-size:.88rem; font-weight:500;
+  transition:color .15s ease; position:relative; padding:.3rem 0;
+}
+.nav-links a::after{
+  content:""; position:absolute; left:0; bottom:0; width:0; height:1px; background:var(--gold);
+  transition:width .25s var(--ease);
+}
+.nav-links a:hover{ color: var(--gold); }
+.nav-links a:hover::after{ width:100%; }
+.nav-links a.active{ color: var(--gold); }
+.nav-links a.active::after{ width:100%; }
+
+.brand{ display:flex; align-items:center; gap:.6rem; }
+.brand img{ height:38px; width:auto; object-fit:contain; transition:transform .2s ease; }
+.brand:hover img{ transform:scale(1.03); }
+.brand-text{ display:flex; flex-direction:column; line-height:1.05; justify-content:center; }
+.brand-text .name{ font-family:var(--font-display); font-size:.95rem; letter-spacing:.06em; color:#fff; font-weight:600;}
+.brand-text .tag{ font-size:.55rem; letter-spacing:.12em; color:var(--gold-soft); }
+.header-cta{ display:flex; align-items:center; }
+.menu-toggle{
+  display:none; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;
+  width:2.4rem; height:2.4rem; align-items:center; justify-content:center; border-radius:.25rem;
+}
+.menu-toggle:hover{ background: rgba(255,255,255,.08); }
+
+.mobile-nav{
+  display:none; flex-direction:column; gap:0;
+  background: rgba(12,12,12,.98); backdrop-filter: blur(10px);
+  border-top:1px solid rgba(255,255,255,.08);
+  max-height:0; overflow:hidden; transition:max-height .35s var(--ease);
+}
+.mobile-nav.open{ max-height:32rem; }
+.mobile-nav a{
+  padding:1rem 1.5rem; color:rgba(255,255,255,.82); font-size:.95rem; font-weight:500;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.mobile-nav a:hover{ color:var(--gold); background:rgba(255,255,255,.03); }
+.mobile-nav .mobile-cta{ padding:1.25rem 1.5rem; }
+
+@media (max-width: 900px){
+  .nav-links{ display:none; }
+  .menu-toggle{ display:flex; }
+  .mobile-nav{ display:flex; }
+  .header-cta{ display:none; }
+}
+
+/* Hero */
+.hero{
+  position:relative;
+  background:
+    linear-gradient(180deg, oklch(11% 0 0 / .55) 0%, oklch(14.5% 0 0 / .72) 45%, oklch(11% 0 0 / .92) 100%),
+    var(--hero-canvas);
+  background-size: cover, cover;
+  background-position: center, center;
+  color:#fff;
+  padding: 7rem 0 5.5rem;
+  overflow:hidden;
+}
+.hero::before{
+  content:"";
+  position:absolute; inset:0;
+  background-image: url('assets/drone-inspection.jpg');
+  background-size: cover;
+  background-position: center 65%;
+  opacity:.24;
+  mix-blend-mode: luminosity;
+  pointer-events:none;
+  animation: heroZoom 26s ease-in-out infinite alternate;
+}
+@keyframes heroZoom{ from{ transform:scale(1); } to{ transform:scale(1.06); } }
+@media (prefers-reduced-motion: reduce){ .hero::before{ animation:none; } }
+.hero::after{
+  content:"";
+  position:absolute; inset:0;
+  background: var(--hero-glow);
+  pointer-events:none;
+}
+.hero-inner{ position:relative; z-index:2; max-width:54rem; text-align:center; margin:0 auto; }
+.hero-logo{
+  width:9rem; height:auto; margin:0 auto 1.25rem;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.45));
+}
+.hero-eyebrow{
+  display:inline-flex; align-items:center; gap:.5rem;
+  font-family: var(--font-display);
+  color: var(--gold);
+  letter-spacing:.2em;
+  font-size:.7rem;
+  font-weight:600;
+  margin-bottom:1.75rem;
+  border:1px solid rgba(212,181,124,.35);
+  padding:.5rem 1rem;
+  border-radius:999px;
+  background: rgba(212,181,124,.06);
+}
+.hero-title{
+  font-size:2.85rem;
+  line-height:1.14;
+  color:#fff;
+  margin-bottom:1.4rem;
+  letter-spacing:-.02em;
+}
+.hero-sub{
+  color: rgba(255,255,255,.7);
+  font-size:1.08rem;
+  line-height:1.7;
+  max-width:38rem;
+  margin:0 auto 2.5rem;
+}
+.hero-actions{
+  display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap;
+  margin-bottom:2.75rem;
+}
+.hero-features{
+  display:grid; grid-template-columns:repeat(3,auto); justify-content:center; gap:2.5rem;
+  border-top:1px solid rgba(255,255,255,.12); padding-top:2rem; max-width:40rem; margin:0 auto;
+}
+.hero-feature{ display:flex; align-items:center; gap:.55rem; font-size:.86rem; color:rgba(255,255,255,.8); font-weight:500; }
+.hero-feature .check{ color:var(--gold); font-size:.9rem; }
+
+@media (max-width: 640px){
+  .hero-title{ font-size:2rem; }
+  .hero{ padding:4.5rem 0 3.5rem; }
+  .hero-features{ grid-template-columns:1fr; justify-items:center; gap:1rem; }
+}
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Ga naar hoofdinhoud</a>
+
+<!-- HEADER -->
+<header id="site-header">
+  <div class="nav-wrap">
+    <a href="#home" class="brand">
+      <img src="assets/logo-header.png" alt="Pro Dak Inspect logo">
+      <div class="brand-text">
+        <span class="name">PRO DAK INSPECT</span>
+        <span class="tag">ONAFHANKELIJKE INSPECTIES MET DRONE</span>
+      </div>
+    </a>
+    <nav class="nav-links" id="nav-links">
+      <a href="#home" data-nav>Home</a>
+      <a href="#diensten" data-nav>Diensten</a>
+      <a href="#pakketten" data-nav>Pakketten</a>
+      <a href="#over-ons" data-nav>Over ons</a>
+      <a href="#faq" data-nav>FAQ</a>
+      <a href="#contact" data-nav>Contact</a>
+    </nav>
+    <div class="header-cta">
+      <a href="#contact" class="btn btn-gold">Inspectie aanvragen</a>
+    </div>
+    <button class="menu-toggle" id="menu-toggle" aria-label="Menu openen" aria-expanded="false" aria-controls="mobile-nav">&#9776;</button>
+  </div>
+  <nav class="mobile-nav" id="mobile-nav">
+    <a href="#home">Home</a>
+    <a href="#diensten">Diensten</a>
+    <a href="#pakketten">Pakketten</a>
+    <a href="#over-ons">Over ons</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact">Contact</a>
+    <div class="mobile-cta"><a href="#contact" class="btn btn-gold" style="width:100%;">Inspectie aanvragen</a></div>
+  </nav>
+</header>
+
+<main id="main">
+<!-- HERO -->
+<section id="home" class="hero">
+  <div class="hero-inner container">
+    <img src="assets/logo-full.jpg" alt="Pro Dak Inspect logo" class="hero-logo" loading="lazy">
+    <p class="hero-eyebrow">Onafhankelijke dakinspectie met drone</p>
+    <h1 class="hero-title">Onafhankelijke dakinspectie voor een helder en betrouwbaar beeld van uw dak.</h1>
+    <p class="hero-sub">Professionele drone-inspecties voor woningen en gebouwen. Onafhankelijk, veilig en gedetailleerd.</p>
+    <div class="hero-actions">
+      <a href="#contact" class="btn btn-gold">Inspectie aanvragen</a>
+      <a href="#diensten" class="btn btn-outline-dark">Onze diensten</a>
+    </div>
+    <div class="hero-features">
+      <div class="hero-feature"><span class="check">&#10003;</span> Onafhankelijk</div>
+      <div class="hero-feature"><span class="check">&#10003;</span> Professionele drone-inspectie</div>
+      <div class="hero-feature"><span class="check">&#10003;</span> Duidelijk inspectierapport</div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION CSS -->
+<style>
+/* Section basics */
+.section{ padding:6.5rem 0; }
+.section-muted{ background: var(--muted); }
+.eyebrow{
+  font-family: var(--font-display);
+  font-size:.72rem; font-weight:600; letter-spacing:.2em;
+  color: var(--muted-foreground); margin-bottom:.85rem;
+}
+.section-title{ font-size:2rem; margin-bottom:1rem; max-width:38rem; }
+.section-desc{ color: var(--muted-foreground); max-width:36rem; line-height:1.75; margin-bottom:2rem; font-size:1.02rem; }
+.section-head{ margin-bottom:3rem; }
+
+/* Reason / feature cards */
+.grid-4{ display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; margin-top:1rem; }
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-top:1rem; }
+.reason-card{
+  background: var(--card); border:1px solid var(--border); border-radius:.4rem;
+  padding:2rem 1.75rem; box-shadow: var(--shadow-soft);
+  transition: transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s ease;
+}
+.reason-card:hover{
+  transform:translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: color-mix(in oklab, var(--gold) 45%, var(--border));
+}
+.reason-icon{
+  color: var(--gold); font-size:1.3rem; margin-bottom:1.1rem; width:2.75rem; height:2.75rem;
+  border-radius:50%; background: color-mix(in oklab, var(--gold) 12%, transparent);
+  display:flex; align-items:center; justify-content:center;
+  transition: transform .3s var(--ease);
+}
+.reason-card:hover .reason-icon{ transform:scale(1.1) rotate(-4deg); }
+.reason-card h3{ font-size:1.08rem; margin-bottom:.55rem; }
+.reason-card p{ color: var(--muted-foreground); font-size:.9rem; line-height:1.65; }
+
+@media (max-width: 980px){
+  .grid-4{ grid-template-columns:1fr 1fr; }
+}
+@media (max-width: 640px){
+  .grid-4, .grid-2{ grid-template-columns:1fr; }
+  .section{ padding:4.5rem 0; }
+  .section-title{ font-size:1.6rem; }
+}
+
+/* Steps */
+.steps-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1.75rem; margin-top:1rem; }
+.step-card{ padding-top:1.1rem; border-top:2px solid var(--gold); transition:transform .3s var(--ease); }
+.step-card:hover{ transform:translateY(-4px); }
+.step-num{ font-family:var(--font-display); color: var(--gold); font-size:.9rem; font-weight:700; margin-bottom:.7rem; letter-spacing:.05em; }
+.step-card h3{ font-size:1.08rem; margin-bottom:.55rem; }
+.step-card p{ color: var(--muted-foreground); font-size:.9rem; line-height:1.65; }
+@media (max-width: 860px){ .steps-grid{ grid-template-columns:1fr 1fr; } }
+@media (max-width: 560px){ .steps-grid{ grid-template-columns:1fr; } }
+
+/* Services */
+.service-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:1.5rem; margin-top:1rem; }
+.service-card{
+  background: var(--card); border:1px solid var(--border); border-radius:.4rem;
+  padding:2.1rem 1.85rem; box-shadow: var(--shadow-soft);
+  transition: transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s ease;
+}
+.service-card:hover{
+  transform:translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: color-mix(in oklab, var(--gold) 45%, var(--border));
+}
+.service-icon{
+  font-size:1.3rem; margin-bottom:1.1rem; width:2.75rem; height:2.75rem;
+  border-radius:50%; background: color-mix(in oklab, var(--gold) 12%, transparent);
+  display:flex; align-items:center; justify-content:center;
+  transition: transform .3s var(--ease);
+}
+.service-card:hover .service-icon{ transform:scale(1.1) rotate(-4deg); }
+.service-card h3{ font-size:1.08rem; margin-bottom:.55rem; }
+.service-card .service-desc{ margin-bottom:1.35rem; font-size:.88rem; }
+
+@media (max-width: 900px){ .service-grid{ grid-template-columns:1fr 1fr; } }
+@media (max-width: 640px){ .service-grid{ grid-template-columns:1fr; } }
+</style>
+
+<!-- WAAROM ONAFHANKELIJK -->
+<section id="onafhankelijk" class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Onafhankelijk</p>
+      <h2 class="section-title">Waarom een onafhankelijke dakinspectie?</h2>
+      <p class="section-desc">Geen belangenvermenging, geen verkooppraatje &mdash; alleen een objectieve blik op de werkelijke staat van uw dak.</p>
+    </div>
+    <div class="grid-4">
+      <div class="reason-card reveal" style="transition-delay:.05s">
+        <div class="reason-icon">&#9733;</div>
+        <h3>Onafhankelijk advies</h3>
+        <p>Geen verkoop van dakwerken. De inspectie is gericht op een objectieve beoordeling.</p>
+      </div>
+      <div class="reason-card reveal" style="transition-delay:.15s">
+        <div class="reason-icon">&#128737;</div>
+        <h3>Veilig inspecteren</h3>
+        <p>Met een drone kunnen moeilijk bereikbare delen worden bekeken zonder onnodig het dak te betreden.</p>
+      </div>
+      <div class="reason-card reveal" style="transition-delay:.25s">
+        <div class="reason-icon">&#128247;</div>
+        <h3>Gedetailleerde beelden</h3>
+        <p>Professionele luchtbeelden maken mogelijke problemen en aandachtspunten duidelijk zichtbaar.</p>
+      </div>
+      <div class="reason-card reveal" style="transition-delay:.35s">
+        <div class="reason-icon">&#128203;</div>
+        <h3>Duidelijk resultaat</h3>
+        <p>De klant ontvangt duidelijke bevindingen en relevante fotodocumentatie.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOE WERKT HET -->
+<section class="section section-muted">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Werkwijze</p>
+      <h2 class="section-title">Hoe werkt het?</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal" style="transition-delay:.05s">
+        <p class="step-num">01</p>
+        <h3>Inspectie aanvragen</h3>
+        <p>Neem contact met ons op en vertel ons wat u wilt laten inspecteren.</p>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.15s">
+        <p class="step-num">02</p>
+        <h3>Drone-inspectie</h3>
+        <p>Wij brengen uw dak of gebouw veilig vanuit de lucht in beeld.</p>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.25s">
+        <p class="step-num">03</p>
+        <h3>Analyse van de beelden</h3>
+        <p>De beelden worden zorgvuldig bekeken en relevante aandachtspunten geselecteerd.</p>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.35s">
+        <p class="step-num">04</p>
+        <h3>Rapport en bevindingen</h3>
+        <p>U ontvangt duidelijke foto's, video en het bijbehorende inspectierapport.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIENSTEN -->
+<section id="diensten" class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Diensten</p>
+      <h2 class="section-title">Onze diensten</h2>
+      <p class="section-desc">Professionele drone-inspecties voor onderhoud, schade, renovatie en documentatie.</p>
+    </div>
+    <div class="service-grid">
+
+      <div class="service-card reveal" style="transition-delay:.05s">
+        <div class="service-icon">&#127968;</div>
+        <h3>Dakinspectie</h3>
+        <p class="service-desc">Professionele visuele controle van uw dak met drone &mdash; dakpannen, nok, schoorstenen en dakgoten.</p>
+        <a href="#contact" class="btn-text">Meer informatie <span class="arrow">&rarr;</span></a>
+      </div>
+
+      <div class="service-card reveal" style="transition-delay:.1s">
+        <div class="service-icon">&#9728;</div>
+        <h3>Zonnepanelen inspectie</h3>
+        <p class="service-desc">Visuele inspectie van zonnepanelen op zichtbare beschadigingen, vervuiling en bevestiging.</p>
+        <a href="#contact" class="btn-text">Meer informatie <span class="arrow">&rarr;</span></a>
+      </div>
+
+      <div class="service-card reveal" style="transition-delay:.15s">
+        <div class="service-icon">&#127970;</div>
+        <h3>Gevelinspectie</h3>
+        <p class="service-desc">Veilige visuele controle van moeilijk bereikbare gevels op scheuren en beschadigingen.</p>
+        <a href="#contact" class="btn-text">Meer informatie <span class="arrow">&rarr;</span></a>
+      </div>
+
+      <div class="service-card reveal" style="transition-delay:.2s">
+        <div class="service-icon">&#9928;</div>
+        <h3>Schade-inspectie</h3>
+        <p class="service-desc">Voor zichtbare schade na bijvoorbeeld storm, hagel of hevige regen.</p>
+        <a href="#contact" class="btn-text">Meer informatie <span class="arrow">&rarr;</span></a>
+      </div>
+
+      <div class="service-card reveal" style="transition-delay:.25s">
+        <div class="service-icon">&#128196;</div>
+        <h3>Verzekeringsclaim</h3>
+        <p class="service-desc">Duidelijke visuele documentatie ter ondersteuning van uw verzekeringsdossier.</p>
+        <a href="#contact" class="btn-text">Meer informatie <span class="arrow">&rarr;</span></a>
+      </div>
+
+      <div class="service-card reveal" style="transition-delay:.3s">
+        <div class="service-icon">&#128736;</div>
+        <h3>Dakwerken &mdash; Voor &amp; Na</h3>
+        <p class="service-desc">Professionele documentatie van de toestand v&oacute;&oacute;r en na uitgevoerde dakwerken.</p>
+        <a href="#contact" class="btn-text">Meer informatie <span class="arrow">&rarr;</span></a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- DRONE TECH -->
+<style>
+.drone-section{ display:grid; grid-template-columns:1fr 1fr; gap:3.5rem; align-items:center; }
+.drone-image{ position:relative; overflow:hidden; border-radius:.4rem; }
+.drone-image img{ border-radius:.4rem; box-shadow: var(--shadow-panel); transition: transform .5s var(--ease); }
+.drone-image:hover img{ transform:scale(1.03); }
+.drone-points{ display:flex; flex-direction:column; gap:.9rem; margin:1.75rem 0 2rem; }
+.drone-point{ display:flex; align-items:flex-start; gap:.7rem; font-size:.92rem; color:var(--muted-foreground); }
+.drone-point .check{ color:var(--gold); flex-shrink:0; margin-top:.15rem; }
+@media (max-width: 860px){
+  .drone-section{ grid-template-columns:1fr; }
+  .drone-image{ order:-1; }
+}
+</style>
+<section class="section section-muted">
+  <div class="container drone-section">
+    <div class="drone-text reveal">
+      <p class="eyebrow">Dronetechnologie</p>
+      <h2 class="section-title">Professionele inspectie met moderne dronetechnologie</h2>
+      <p class="section-desc" style="margin-bottom:0;">Met moderne dronetechnologie kunnen moeilijk bereikbare delen van een dak veilig en effici&euml;nt vanuit de lucht worden ge&iuml;nspecteerd.</p>
+      <div class="drone-points">
+        <div class="drone-point"><span class="check">&#10003;</span> Moeilijk bereikbare plaatsen</div>
+        <div class="drone-point"><span class="check">&#10003;</span> Snelle visuele controle</div>
+        <div class="drone-point"><span class="check">&#10003;</span> Gedetailleerde beelden</div>
+        <div class="drone-point"><span class="check">&#10003;</span> Minder risico</div>
+        <div class="drone-point"><span class="check">&#10003;</span> Duidelijke documentatie</div>
+      </div>
+      <a href="#contact" class="btn btn-gold">Inspectie aanvragen</a>
+    </div>
+    <div class="drone-image reveal">
+      <img src="assets/drone-inspection.jpg" alt="Drone inspecteert het dak van een Belgische woning vanuit de lucht" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- PAKKETTEN -->
+<style>
+.section-dark{ background: var(--ink); color:#fff; }
+.eyebrow-light{ color: var(--gold); }
+.title-light{ color:#fff; }
+.desc-light{ color: rgba(255,255,255,.6); }
+
+.pricing-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; margin-top:1rem; align-items:start; }
+.price-card{
+  background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12); border-radius:.4rem;
+  padding:2.25rem 1.85rem; position:relative;
+  transition: transform .3s var(--ease), border-color .3s ease, background .3s ease;
+}
+.price-card:hover{ transform:translateY(-6px); border-color: rgba(212,181,124,.4); }
+.price-card-featured{
+  background: rgba(255,255,255,.06);
+  border-color: var(--gold);
+  transform: translateY(-.5rem);
+  box-shadow: var(--shadow-panel);
+}
+.price-card-featured:hover{ transform: translateY(-1.1rem); }
+.price-badge{
+  position:absolute; top:-.8rem; left:50%; transform:translateX(-50%);
+  background: var(--gold); color: var(--ink); font-size:.65rem; font-weight:700;
+  letter-spacing:.08em; padding:.35rem .9rem; border-radius:999px; white-space:nowrap;
+}
+.price-name{ font-family:var(--font-display); letter-spacing:.15em; font-size:.72rem; color: rgba(255,255,255,.55); margin-bottom:.7rem; text-transform:uppercase; }
+.price-amount{ font-family:var(--font-display); font-size:2.5rem; font-weight:700; color:#fff; margin-bottom:.4rem; }
+.price-tagline{ color: rgba(255,255,255,.65); font-size:.9rem; margin-bottom:1.5rem; }
+.price-value{ font-size:.8rem; color: var(--gold-soft); margin-bottom:1.5rem; line-height:1.5; padding-bottom:1.4rem; border-bottom:1px solid rgba(255,255,255,.1); }
+.price-list{ display:flex; flex-direction:column; gap:.65rem; margin-bottom:2.1rem; }
+.price-list li{ font-size:.86rem; color: rgba(255,255,255,.82); padding-left:1.15rem; position:relative; line-height:1.5; }
+.price-list li::before{ content:"\2713"; position:absolute; left:0; color: var(--gold); font-size:.75rem; top:.15rem; }
+.price-cta{ width:100%; }
+
+@media (max-width: 900px){
+  .pricing-grid{ grid-template-columns:1fr; }
+  .price-card-featured{ transform:none; }
+  .price-card-featured:hover{ transform:translateY(-6px); }
+}
+</style>
+<section id="pakketten" class="section section-dark">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow eyebrow-light">Pakketten</p>
+      <h2 class="section-title title-light">Onze pakketten</h2>
+      <p class="section-desc desc-light">Kies de inspectie die het beste bij uw situatie past &mdash; elk pakket bouwt verder op het vorige.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="price-card reveal" style="transition-delay:.05s">
+        <p class="price-name">Basis</p>
+        <p class="price-amount">&euro;99</p>
+        <p class="price-tagline">Snelle dakcontrole</p>
+        <ul class="price-list">
+          <li>Drone-inspectie</li>
+          <li>15&ndash;25 foto's</li>
+          <li>Controle op zichtbare schade</li>
+          <li>Korte beoordeling</li>
+          <li>Inspectierapport</li>
+          <li>Digitale levering</li>
+        </ul>
+        <a href="#contact" class="btn btn-outline-dark price-cta">Bekijk pakket</a>
+      </div>
+
+      <div class="price-card price-card-featured reveal" style="transition-delay:.15s">
+        <p class="price-badge">Meest gekozen</p>
+        <p class="price-name">Uitgebreid</p>
+        <p class="price-amount">&euro;149</p>
+        <p class="price-tagline">Complete dakinspectie</p>
+        <p class="price-value">Alles van Basis, plus een volledige drone-inspectie met video en gedetailleerde rapportage &mdash; het beste evenwicht tussen prijs en diepgang.</p>
+        <ul class="price-list">
+          <li>Volledige drone-inspectie</li>
+          <li>30&ndash;50 foto's</li>
+          <li>Dronevideo</li>
+          <li>Controle van dak, nok, schoorsteen, dakgoten en dakranden</li>
+          <li>Gedetailleerd inspectierapport</li>
+          <li>Foto's met duidelijke aanduidingen</li>
+          <li>Digitale levering</li>
+        </ul>
+        <a href="#contact" class="btn btn-gold price-cta">Bekijk pakket</a>
+      </div>
+
+      <div class="price-card reveal" style="transition-delay:.25s">
+        <p class="price-name">Professioneel</p>
+        <p class="price-amount">&euro;499</p>
+        <p class="price-tagline">Complete gebouwinspectie + 3D</p>
+        <p class="price-value">Voor wie het volledige gebouw in kaart wil brengen: dak, gevels &eacute;n zonnepanelen, samengevat in een digitaal 3D-model &mdash; ideaal bij aankoop, renovatie of grote schadedossiers.</p>
+        <ul class="price-list">
+          <li>Alles van het Uitgebreid-pakket</li>
+          <li>Gevelinspectie</li>
+          <li>Visuele zonnepaneleninspectie</li>
+          <li>Hoge-resolutiefoto's</li>
+          <li>3D-model van het gebouw/dak</li>
+          <li>Complete digitale documentatie</li>
+        </ul>
+        <a href="#contact" class="btn btn-outline-dark price-cta">Bekijk pakket</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAT KRIJGT U -->
+<section class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Resultaat</p>
+      <h2 class="section-title">Wat krijgt u na een inspectie?</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal" style="transition-delay:.05s">
+        <p class="step-num">01</p>
+        <h3>Professionele dronebeelden</h3>
+        <p>Scherpe luchtfoto's van elk relevant onderdeel van uw dak of gebouw.</p>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.15s">
+        <p class="step-num">02</p>
+        <h3>Analyse van aandachtspunten</h3>
+        <p>Zichtbare onregelmatigheden worden zorgvuldig ge&iuml;dentificeerd.</p>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.25s">
+        <p class="step-num">03</p>
+        <h3>Duidelijke fotodocumentatie</h3>
+        <p>Foto's met heldere aanduidingen, klaar om te bewaren of te delen.</p>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.35s">
+        <p class="step-num">04</p>
+        <h3>Overzichtelijk inspectierapport</h3>
+        <p>Een helder rapport met de bevindingen, digitaal geleverd.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAAROM PRO DAK INSPECT -->
+<section id="over-ons" class="section section-muted">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Over ons</p>
+      <h2 class="section-title">Waarom Pro Dak Inspect?</h2>
+      <p class="section-desc" style="font-weight:600; color:var(--foreground);">Wij verkopen geen dakwerken. Wij inspecteren uw dak.</p>
+    </div>
+    <div class="grid-4">
+      <div class="reason-card reveal" style="transition-delay:.05s">
+        <div class="reason-icon">&#9878;</div>
+        <h3>Onafhankelijk</h3>
+        <p>Geen dakwerker of aannemer die u iets probeert te verkopen &mdash; enkel een objectieve inspectie.</p>
+      </div>
+      <div class="reason-card reveal" style="transition-delay:.15s">
+        <div class="reason-icon">&#127891;</div>
+        <h3>Professioneel</h3>
+        <p>Iedere inspectie wordt zorgvuldig gedocumenteerd met foto's en een passend rapport.</p>
+      </div>
+      <div class="reason-card reveal" style="transition-delay:.25s">
+        <div class="reason-icon">&#128737;</div>
+        <h3>Veilig</h3>
+        <p>Moeilijk bereikbare plaatsen worden visueel ge&iuml;nspecteerd zonder onnodig op het dak te lopen.</p>
+      </div>
+      <div class="reason-card reveal" style="transition-delay:.35s">
+        <div class="reason-icon">&#128161;</div>
+        <h3>Duidelijk</h3>
+        <p>Hoge-resolutiefoto's en heldere rapportage maken aandachtspunten eenvoudig te begrijpen.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREMIUM 3D -->
+<section class="section section-dark">
+  <div class="container drone-section">
+    <div class="drone-image reveal">
+      <img src="assets/premium-3d.jpg" alt="Digitaal 3D-model van een woning met dak en gevels na een drone-inspectie" loading="lazy">
+    </div>
+    <div class="drone-text reveal">
+      <p class="eyebrow eyebrow-light">Professioneel pakket</p>
+      <h2 class="section-title title-light">Een compleet beeld van uw gebouw</h2>
+      <p class="section-desc desc-light">Met ons Professioneel-pakket combineren we dronebeelden van het dak, gevels en zonnepanelen met een digitaal 3D-model. Zo krijgt u een uitgebreid en overzichtelijk beeld van uw gebouw.</p>
+      <a href="#contact" class="btn btn-gold">Bekijk pakket &mdash; &euro;499</a>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<style>
+.gallery-grid{ display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:12rem; gap:1rem; margin-top:1rem; }
+.gallery-item{
+  position:relative; border-radius:.35rem; overflow:hidden; cursor:pointer; background:var(--muted);
+  border:1px solid var(--border);
+}
+.gallery-item[role="button"]:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.gallery-item img{ width:100%; height:100%; object-fit:cover; transition:transform .4s var(--ease); }
+.gallery-item:hover img{ transform:scale(1.06); }
+.gallery-item.span-2{ grid-column:span 2; }
+.gallery-item.span-2-row{ grid-row:span 2; }
+.gallery-caption{
+  position:absolute; left:0; right:0; bottom:0; padding:.75rem .9rem;
+  background:linear-gradient(0deg, rgba(0,0,0,.72), transparent);
+  color:#fff; font-size:.78rem; font-weight:600; opacity:0; transform:translateY(6px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.gallery-item:hover .gallery-caption{ opacity:1; transform:translateY(0); }
+.gallery-placeholder{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
+  color:var(--muted-foreground); font-size:.78rem; text-align:center; padding:1rem; height:100%;
+}
+.gallery-placeholder .plus{ font-size:1.4rem; color:var(--gold); }
+@media (max-width: 860px){
+  .gallery-grid{ grid-template-columns:repeat(2,1fr); grid-auto-rows:9rem; }
+  .gallery-item.span-2{ grid-column:span 1; }
+  .gallery-item.span-2-row{ grid-row:span 1; }
+}
+
+/* Lightbox */
+.lightbox{
+  position:fixed; inset:0; z-index:200; background:rgba(8,8,8,.94);
+  display:none; align-items:center; justify-content:center; padding:2rem;
+  opacity:0; transition:opacity .25s ease;
+}
+.lightbox.open{ display:flex; opacity:1; }
+.lightbox img{ max-width:90vw; max-height:82vh; border-radius:.3rem; box-shadow:var(--shadow-panel); }
+.lightbox-close{
+  position:absolute; top:1.5rem; right:1.5rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2);
+  color:#fff; width:2.6rem; height:2.6rem; border-radius:50%; font-size:1.2rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:background .2s ease;
+}
+.lightbox-close:hover{ background:rgba(255,255,255,.18); }
+.lightbox-caption{ position:absolute; bottom:1.75rem; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.75); font-size:.85rem; }
+</style>
+<section class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">In beeld</p>
+      <h2 class="section-title">Voorbeeld van een inspectie</h2>
+      <p class="section-desc">Een greep uit het soort beelden dat u ontvangt na een inspectie. Vervang deze placeholders gerust door uw eigen beelden.</p>
+    </div>
+    <div class="gallery-grid reveal">
+      <div class="gallery-item span-2 span-2-row" data-caption="Dronebeeld van dak" data-full="assets/drone-inspection.jpg" role="button" tabindex="0" aria-label="Dronebeeld van dak vergroten">
+        <img src="assets/drone-inspection.jpg" alt="Dronebeeld van een dak tijdens inspectie" loading="lazy">
+        <div class="gallery-caption">Dronebeeld van dak</div>
+      </div>
+      <div class="gallery-item" data-caption="Digitaal 3D-model" data-full="assets/premium-3d.jpg" role="button" tabindex="0" aria-label="3D-model vergroten">
+        <img src="assets/premium-3d.jpg" alt="3D-model van een geïnspecteerde woning" loading="lazy">
+        <div class="gallery-caption">3D-model (Professioneel)</div>
+      </div>
+      <div class="gallery-item">
+        <div class="gallery-placeholder"><span class="plus">+</span> Close-up dakbedekking</div>
+      </div>
+      <div class="gallery-item">
+        <div class="gallery-placeholder"><span class="plus">+</span> Dakgoot</div>
+      </div>
+      <div class="gallery-item">
+        <div class="gallery-placeholder"><span class="plus">+</span> Voorbeeld schadebeeld</div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Afbeelding vergroten">
+  <button class="lightbox-close" id="lightbox-close" aria-label="Sluiten">&times;</button>
+  <img src="" alt="" id="lightbox-img">
+  <p class="lightbox-caption" id="lightbox-caption"></p>
+</div>
+
+<!-- SCHADE -->
+<style>
+.schade-section{ background:#111; color:#fff; text-align:left; }
+.schade-title{ color:#fff; max-width:34rem; }
+.schade-desc{ color: rgba(255,255,255,.62); max-width:34rem; }
+.schade-note{ margin:0 0 1.5rem; color: var(--gold); font-size:.8rem; font-weight:600; letter-spacing:.05em; }
+.schade-disclaimer{ margin-top:1.25rem; color: rgba(255,255,255,.4); font-size:.76rem; font-style:italic; max-width:34rem; }
+</style>
+<section class="section schade-section">
+  <div class="container reveal">
+    <h2 class="section-title schade-title">Schade? Wij brengen het duidelijk in beeld.</h2>
+    <p class="section-desc schade-desc">Na storm, hagel of andere schade kunnen wij de zichtbare toestand van uw dak en gebouw professioneel documenteren. U ontvangt duidelijke foto's en een gedetailleerd inspectierapport dat u kunt gebruiken als visuele documentatie voor uw verzekeringsdossier.</p>
+    <p class="schade-note">Verzekeringsclaim &mdash; &euro;200</p>
+    <a href="#contact" class="btn btn-gold">Inspectie aanvragen</a>
+    <p class="schade-disclaimer">Pro Dak Inspect levert visuele documentatie en geen technische of verzekeringskundige expertise.</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<style>
+.faq-list{ margin-top:1rem; border-top:1px solid var(--border); }
+.faq-item{ border-bottom:1px solid var(--border); }
+.faq-q{
+  width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  padding:1.35rem 0; font-weight:600; font-size:.98rem; color:var(--foreground);
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+}
+.faq-q .faq-icon{ color:var(--gold); font-size:1.3rem; font-weight:400; flex-shrink:0; transition:transform .3s var(--ease); line-height:1; }
+.faq-item.open .faq-icon{ transform:rotate(45deg); }
+.faq-a{
+  max-height:0; overflow:hidden; transition:max-height .35s var(--ease), padding .35s var(--ease);
+}
+.faq-item.open .faq-a{ max-height:20rem; padding-bottom:1.35rem; }
+.faq-a p{ color: var(--muted-foreground); font-size:.9rem; line-height:1.7; max-width:38rem; }
+</style>
+<section id="faq" class="section">
+  <div class="container-sm">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="section-title">Veelgestelde vragen</h2>
+    </div>
+    <div class="faq-list reveal">
+
+      <div class="faq-item open">
+        <button class="faq-q" aria-expanded="true">Waarom een dakinspectie met een drone? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Een drone brengt elk deel van uw dak veilig en snel in beeld, ook plaatsen die moeilijk of gevaarlijk te bereiken zijn zonder ladder of steiger.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Hoe lang duurt een inspectie? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Een gemiddelde dakinspectie duurt doorgaans tussen de 20 en 45 minuten ter plaatse, afhankelijk van de grootte en complexiteit van het gebouw.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Ontvang ik een rapport? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Ja. Elk pakket bevat een inspectierapport. Bij de Uitgebreid- en Professioneel-pakketten is dit een gedetailleerd inspectierapport.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Kan een drone elk dak inspecteren? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>In de meeste gevallen wel. Bij uitzonderlijke situaties (bv. drukke omgeving of luchtvaartbeperkingen) bekijken we vooraf samen met u de mogelijkheden.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Moet ik thuis zijn tijdens de inspectie? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Dat is niet strikt noodzakelijk, maar wel aan te raden zodat we eventuele aandachtspunten meteen kunnen bespreken.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Wat kost een dakinspectie? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Onze pakketten starten vanaf &euro;99. De vermelde prijzen zijn indicatief en gelden als vanaf-prijs; voor grotere of complexere gebouwen maken we een offerte op maat.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Kan ik een inspectie aanvragen v&oacute;&oacute;r de aankoop van een woning? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Zeker. Een onafhankelijke inspectie voor aankoop geeft u een objectief beeld van de dakstaat, los van de verkopende partij.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Maken jullie thermische inspecties? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Nee. Pro Dak Inspect biedt momenteel geen thermische inspecties aan.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Maken jullie 3D-modellen? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Ja. Een 3D-model is inbegrepen in het Professioneel-pakket van &euro;499.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Werken jullie voor particulieren en bedrijven? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Ja. We werken voor particulieren, dakdekkers, aannemers, vastgoedprofessionals, syndici en bedrijven.</p></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<style>
+.final-cta{
+  background: linear-gradient(180deg, var(--ink) 0%, oklch(9% 0 0) 100%);
+  color:#fff; text-align:center; padding:5.5rem 0; position:relative; overflow:hidden;
+}
+.final-cta::before{
+  content:""; position:absolute; inset:0; background: var(--hero-glow); pointer-events:none;
+}
+.final-cta-inner{ position:relative; max-width:34rem; margin:0 auto; }
+.final-cta h2{ color:#fff; font-size:2rem; margin-bottom:1rem; }
+.final-cta p{ color:rgba(255,255,255,.65); margin-bottom:2.25rem; font-size:1.02rem; line-height:1.65; }
+</style>
+<section class="final-cta">
+  <div class="container final-cta-inner reveal">
+    <h2>Vermoedt u problemen met uw dak?</h2>
+    <p>Laat uw dak professioneel inspecteren en krijg een duidelijk beeld van de huidige staat.</p>
+    <a href="#contact" class="btn btn-gold">Inspectie aanvragen</a>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<style>
+.contact-section{ padding-bottom:6.5rem; }
+.contact-grid{ display:grid; grid-template-columns:.85fr 1.15fr; gap:3.5rem; align-items:start; }
+.contact-details{ margin-top:2.25rem; display:flex; flex-direction:column; gap:1rem; font-size:.92rem; color: rgba(255,255,255,.8); }
+.contact-form{ background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:.4rem; padding:2.25rem; position:relative; }
+.form-row{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.form-row-3{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.form-field{ margin-bottom:1.2rem; }
+.form-field label{ display:block; font-size:.78rem; color: rgba(255,255,255,.65); margin-bottom:.4rem; }
+.form-field input, .form-field select, .form-field textarea{
+  width:100%; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15);
+  border-radius:.25rem; padding:.75rem .9rem; color:#fff; font-family:var(--font-sans); font-size:.88rem;
+  transition:border-color .2s ease, background .2s ease;
+}
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus{
+  border-color: var(--gold); background: rgba(255,255,255,.08);
+}
+.form-field input::placeholder, .form-field textarea::placeholder{ color: rgba(255,255,255,.35); }
+.form-field select{ color: rgba(255,255,255,.85); }
+.form-field.has-error input, .form-field.has-error select, .form-field.has-error textarea{
+  border-color: oklch(62% .19 25);
+}
+.field-error{ display:none; color: oklch(72% .17 25); font-size:.75rem; margin-top:.4rem; }
+.form-field.has-error .field-error{ display:block; }
+
+.form-success{
+  display:none; text-align:center; padding:2.5rem 1rem;
+}
+.form-success.show{ display:block; }
+.form-success .check-circle{
+  width:3.5rem; height:3.5rem; border-radius:50%; background:color-mix(in oklab, var(--gold) 20%, transparent);
+  color:var(--gold); display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin:0 auto 1.25rem;
+  animation: pop .4s var(--ease);
+}
+@keyframes pop{ from{ transform:scale(.6); opacity:0; } to{ transform:scale(1); opacity:1; } }
+.form-success h3{ color:#fff; margin-bottom:.6rem; }
+.form-success p{ color:rgba(255,255,255,.6); font-size:.9rem; }
+@media (prefers-reduced-motion: reduce){ .form-success .check-circle{ animation:none; } }
+
+@media (max-width: 860px){
+  .contact-grid{ grid-template-columns:1fr; }
+  .form-row, .form-row-3{ grid-template-columns:1fr; }
+}
+
+.file-upload{ display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; }
+.file-upload input[type="file"]{ position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+.file-upload-btn{
+  display:inline-flex; align-items:center; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+  color:#fff; font-size:.82rem; font-weight:600; padding:.6rem 1.1rem; border-radius:.25rem; cursor:pointer;
+  transition:background .15s ease;
+}
+.file-upload-btn:hover{ background: rgba(255,255,255,.14); }
+.file-upload-status{ font-size:.8rem; color: rgba(255,255,255,.45); }
+</style>
+<section id="contact" class="section section-dark contact-section">
+  <div class="container contact-grid">
+    <div class="contact-info reveal">
+      <p class="eyebrow eyebrow-light">Contact</p>
+      <h2 class="section-title title-light">Vraag uw inspectie aan</h2>
+      <p class="desc-light">Vertel ons wat u wilt laten inspecteren. Wij nemen zo snel mogelijk contact met u op.</p>
+      <ul class="contact-details">
+        <li>&#128222; +32 488 20 72 96</li>
+        <li>&#9993; info@prodakinspect.be</li>
+        <li>&#128205; prodakinspect.be</li>
+      </ul>
+    </div>
+    <div class="contact-form reveal">
+      <form id="contact-form" novalidate>
+        <div class="form-row">
+          <div class="form-field" data-field="voornaam">
+            <label for="f-voornaam">Voornaam</label>
+            <input type="text" id="f-voornaam" name="voornaam" placeholder="Uw voornaam" required>
+            <p class="field-error">Vul uw voornaam in.</p>
+          </div>
+          <div class="form-field" data-field="achternaam">
+            <label for="f-achternaam">Achternaam</label>
+            <input type="text" id="f-achternaam" name="achternaam" placeholder="Uw achternaam" required>
+            <p class="field-error">Vul uw achternaam in.</p>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" data-field="email">
+            <label for="f-email">E-mail</label>
+            <input type="email" id="f-email" name="email" placeholder="u@voorbeeld.be" required>
+            <p class="field-error">Vul een geldig e-mailadres in.</p>
+          </div>
+          <div class="form-field" data-field="telefoon">
+            <label for="f-telefoon">Telefoon</label>
+            <input type="tel" id="f-telefoon" name="telefoon" placeholder="+32 ...">
+          </div>
+        </div>
+        <div class="form-field" data-field="adres">
+          <label for="f-adres">Adres</label>
+          <input type="text" id="f-adres" name="adres" placeholder="Straat, gemeente" required>
+          <p class="field-error">Vul het adres van het gebouw in.</p>
+        </div>
+        <div class="form-row">
+          <div class="form-field" data-field="type-gebouw">
+            <label for="f-type-gebouw">Type gebouw</label>
+            <select id="f-type-gebouw" name="type-gebouw" required>
+              <option value="">Kies een type</option>
+              <option>Woning</option>
+              <option>Appartement</option>
+              <option>Bedrijfspand</option>
+              <option>Andere</option>
+            </select>
+            <p class="field-error">Kies het type gebouw.</p>
+          </div>
+          <div class="form-field" data-field="dienst">
+            <label for="f-dienst">Gewenste dienst</label>
+            <select id="f-dienst" name="dienst" required>
+              <option value="">Kies een dienst</option>
+              <option>Drone dakinspectie</option>
+              <option>Dakcontrole</option>
+              <option>Dakgootinspectie</option>
+              <option>Daklekkage</option>
+              <option>Inspectie na storm</option>
+              <option>Inspectie bij aankoop/verkoop</option>
+              <option>Andere</option>
+            </select>
+            <p class="field-error">Kies de gewenste dienst.</p>
+          </div>
+        </div>
+        <div class="form-field" data-field="bericht">
+          <label for="f-bericht">Bericht</label>
+          <textarea rows="4" id="f-bericht" name="bericht" placeholder="Wat wilt u laten inspecteren?"></textarea>
+        </div>
+        <div class="form-field">
+          <label>Foto's uploaden</label>
+          <div class="file-upload">
+            <input type="file" id="photo-upload" accept="image/*" multiple>
+            <label for="photo-upload" class="file-upload-btn">Bestand kiezen</label>
+            <span class="file-upload-status" id="file-upload-status">Geen bestand gekozen</span>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;">Offerte aanvragen</button>
+      </form>
+      <div class="form-success" id="form-success">
+        <div class="check-circle">&#10003;</div>
+        <h3>Bedankt voor uw aanvraag!</h3>
+        <p>We hebben uw bericht ontvangen en nemen zo snel mogelijk contact met u op.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- FOOTER -->
+<style>
+.footer{
+  position:relative;
+  background:
+    linear-gradient(180deg, oklch(4% 0 0 / .88) 0%, oklch(4% 0 0 / .94) 60%, oklch(2% 0 0 / .98) 100%),
+    url('assets/footer-rooftops.jpg');
+  background-size: cover;
+  background-position: center;
+  color: rgba(255,255,255,.7);
+  padding:4.5rem 0 2rem;
+}
+.footer > .container{ position:relative; z-index:1; }
+.footer-top{ display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:3rem; padding-bottom:3rem; border-bottom:1px solid rgba(255,255,255,.1); margin-bottom:2.25rem; }
+.footer-brand{ display:flex; align-items:flex-start; gap:.9rem; }
+.footer-brand img{ height:42px; object-fit:contain; }
+.footer-brand-name{ font-family:var(--font-display); color:#fff; font-size:.92rem; letter-spacing:.05em; margin-bottom:.5rem; }
+.footer-brand-desc{ font-size:.85rem; color: rgba(255,255,255,.55); line-height:1.6; max-width:20rem; }
+.footer-col-title{ color:#fff; font-size:.82rem; font-weight:600; margin-bottom:1rem; letter-spacing:.03em; }
+.footer-cols a{ display:block; font-size:.85rem; color: rgba(255,255,255,.55); margin-bottom:.7rem; transition:color .15s ease; }
+.footer-cols a:hover{ color: var(--gold); }
+.footer-contact-item{ font-size:.85rem; color: rgba(255,255,255,.55); margin-bottom:.7rem; }
+.footer-social{ display:flex; gap:1rem; margin-top:1.1rem; }
+.footer-social a{
+  width:2.3rem; height:2.3rem; border-radius:50%; border:1px solid rgba(255,255,255,.18);
+  display:flex; align-items:center; justify-content:center; font-size:.95rem; color:#fff;
+  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+}
+.footer-social a:hover{ border-color: var(--gold); background: rgba(212,181,124,.1); transform:translateY(-2px); }
+
+.footer-disclaimer{ max-width:44rem; margin:0 auto 1.5rem; text-align:center; font-size:.74rem; line-height:1.6; color: rgba(255,255,255,.35); }
+.footer-copy{ text-align:center; font-size:.78rem; color: rgba(255,255,255,.35); border-top:1px solid rgba(255,255,255,.08); padding-top:1.75rem; }
+
+@media (max-width: 780px){
+  .footer-top{ grid-template-columns:1fr; gap:2.25rem; }
+}
+</style>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="assets/logo-mark-gold.png" alt="Pro Dak Inspect logo" loading="lazy">
+        <div>
+          <p class="footer-brand-name">PRO DAK INSPECT</p>
+          <p class="footer-brand-desc">Onafhankelijke dakinspectie met moderne dronetechnologie.</p>
+          <div class="footer-social">
+            <a href="#" aria-label="Instagram">&#128247;</a>
+            <a href="#" aria-label="Facebook">f</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-cols">
+        <p class="footer-col-title">Navigatie</p>
+        <a href="#home">Home</a>
+        <a href="#diensten">Diensten</a>
+        <a href="#pakketten">Pakketten</a>
+        <a href="#over-ons">Over ons</a>
+        <a href="#faq">FAQ</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <div class="footer-cols">
+        <p class="footer-col-title">Contact</p>
+        <p class="footer-contact-item">&#9993; info@prodakinspect.be</p>
+        <p class="footer-contact-item">&#128222; +32 488 20 72 96</p>
+        <p class="footer-contact-item">&#128205; Werkgebied: heel Vlaanderen</p>
+      </div>
+    </div>
+    <p class="footer-disclaimer">Pro Dak Inspect voert visuele drone-inspecties uit en levert fotodocumentatie en inspectierapporten. Wij leveren geen technische, thermische of verzekeringskundige expertise. Vermelde prijzen zijn indicatief en gelden als vanaf-prijs waar aangegeven.</p>
+    <p class="footer-copy">&copy; 2026 Pro Dak Inspect &mdash; prodakinspect.be</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ---- Header scroll state ----
+  var header = document.getElementById('site-header');
+  function onScroll(){
+    if (window.scrollY > 12) header.classList.add('is-scrolled');
+    else header.classList.remove('is-scrolled');
+  }
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive:true });
+
+  // ---- Mobile menu ----
+  var toggle = document.getElementById('menu-toggle');
+  var mobileNav = document.getElementById('mobile-nav');
+  toggle.addEventListener('click', function(){
+    var open = mobileNav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.innerHTML = open ? '&times;' : '&#9776;';
+  });
+  mobileNav.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){
+      mobileNav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.innerHTML = '&#9776;';
+    });
+  });
+
+  // ---- Scroll-spy active nav link ----
+  var navLinks = document.querySelectorAll('[data-nav]');
+  var sections = Array.prototype.map.call(navLinks, function(a){
+    return document.querySelector(a.getAttribute('href'));
+  }).filter(Boolean);
+  function updateActive(){
+    var pos = window.scrollY + 140;
+    var current = sections[0];
+    sections.forEach(function(sec){ if (sec.offsetTop <= pos) current = sec; });
+    navLinks.forEach(function(a){
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+    });
+  }
+  updateActive();
+  window.addEventListener('scroll', updateActive, { passive:true });
+
+  // ---- Reveal on scroll ----
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var revealEls = document.querySelectorAll('.reveal');
+  if (reduceMotion || !('IntersectionObserver' in window)) {
+    revealEls.forEach(function(el){ el.classList.add('is-visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold:.15, rootMargin:'0px 0px -40px 0px' });
+    revealEls.forEach(function(el){ io.observe(el); });
+  }
+
+  // ---- FAQ accordion ----
+  document.querySelectorAll('.faq-item').forEach(function(item){
+    var btn = item.querySelector('.faq-q');
+    btn.addEventListener('click', function(){
+      var isOpen = item.classList.contains('open');
+      item.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+    });
+  });
+
+  // ---- File upload label ----
+  var fi = document.getElementById('photo-upload');
+  var st = document.getElementById('file-upload-status');
+  if (fi) {
+    fi.addEventListener('change', function(){
+      st.textContent = fi.files.length ? (fi.files.length + ' bestand(en) gekozen') : 'Geen bestand gekozen';
+    });
+  }
+
+  // ---- Gallery lightbox ----
+  var lightbox = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lightbox-img');
+  var lbCaption = document.getElementById('lightbox-caption');
+  var lbClose = document.getElementById('lightbox-close');
+  var lastFocused = null;
+  document.querySelectorAll('.gallery-item[data-full]').forEach(function(item){
+    item.addEventListener('click', function(){
+      lastFocused = item;
+      lbImg.src = item.getAttribute('data-full');
+      lbImg.alt = item.getAttribute('data-caption') || '';
+      lbCaption.textContent = item.getAttribute('data-caption') || '';
+      lightbox.classList.add('open');
+      lbClose.focus();
+    });
+    item.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        item.click();
+      }
+    });
+  });
+  function closeLightbox(){
+    lightbox.classList.remove('open');
+    lbImg.src='';
+    if (lastFocused) lastFocused.focus();
+  }
+  lbClose.addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', function(e){ if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && lightbox.classList.contains('open')) closeLightbox(); });
+
+  // ---- Contact form validation + success state ----
+  var form = document.getElementById('contact-form');
+  var success = document.getElementById('form-success');
+  if (form) {
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var valid = true;
+      form.querySelectorAll('[required]').forEach(function(field){
+        var wrap = field.closest('.form-field');
+        var ok = field.value.trim() !== '';
+        if (field.type === 'email' && ok) {
+          ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value.trim());
+        }
+        wrap.classList.toggle('has-error', !ok);
+        if (!ok) valid = false;
+      });
+      if (!valid) {
+        var firstError = form.querySelector('.has-error');
+        if (firstError) firstError.querySelector('input,select,textarea').focus();
+        return;
+      }
+      form.style.display = 'none';
+      success.classList.add('show');
+    });
+  }
+})();
+</script>
+</body>
+</html>
